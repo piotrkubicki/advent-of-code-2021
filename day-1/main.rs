@@ -17,7 +17,7 @@ fn count_depth_increase<R: BufRead>(readings: &mut R) -> i32 {
         previous = reading;
     }
 
-    return counter;
+    counter
 }
 
 fn task_one() {
@@ -54,7 +54,7 @@ fn count_sum_depth_increase<R: BufRead>(readings: &mut R) -> i32 {
         }
     }
 
-    return counter;
+    counter
 }
 
 fn task_two() {
