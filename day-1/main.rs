@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::cmp::Ordering;
 
 fn count_depth_increase<R: BufRead>(readings: &mut R) -> i32 {
     let mut counter = 0;
@@ -28,24 +29,28 @@ fn task_one() {
 }
 
 fn count_sum_depth_increase<R: BufRead>(readings: &mut R) -> i32 {
-    let mut readings_vec = Vec::<i32>::new();
+    const WINDOW_SIZE: usize = 3;
+    let mut readings_arr: [i32; WINDOW_SIZE] = [0; WINDOW_SIZE];
     let mut counter = 0;
     let mut previous_sum = 0;
 
-    for line in readings.lines() {
+    for line in readings.lines().enumerate() {
+        let (i, line) = line;
         let reading = line.expect("Unable to read line").parse::<i32>().unwrap();
-        readings_vec.push(reading);
 
-        if readings_vec.len() == 3 {
-            let current_sum = readings_vec.iter().sum();
-            if previous_sum == 0 {
+        match (i+1).cmp(&WINDOW_SIZE) {
+            Ordering::Less => readings_arr[i] = reading,
+            _ => {
+                let current_sum = readings_arr.iter().sum();
+                if previous_sum == 0 {
+                    previous_sum = current_sum;
+                }
+                if previous_sum < current_sum {
+                    counter += 1;
+                }
                 previous_sum = current_sum;
+                readings_arr[i%WINDOW_SIZE] = reading;
             }
-            if previous_sum < current_sum {
-                counter += 1;
-            }
-            readings_vec.remove(0);
-            previous_sum = current_sum;
         }
     }
 
