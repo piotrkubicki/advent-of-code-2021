@@ -6,12 +6,19 @@ struct Position {
     y_pos: u32,
 }
 
-trait Driver {
-    fn move_submarine(&mut self, direction: &str, strength: u32);
+struct PositionAim {
+    x_pos: u32,
+    y_pos: u32,
+    aim: u32,
 }
 
-impl Driver for Position {
-    fn move_submarine(&mut self, direction: &str, strength: u32) {
+trait Submarine {
+    fn change_position(&mut self, direction: &str, strength: u32);
+    fn calculate_position(&self) -> u32;
+}
+
+impl Submarine for Position {
+    fn change_position(&mut self, direction: &str, strength: u32) {
         match direction {
             "forward" => self.x_pos += strength,
             "down" => self.y_pos += strength,
@@ -19,41 +26,71 @@ impl Driver for Position {
             _ => println!("Unknown command, skipping!")
         }
     }
+
+    fn calculate_position(&self) -> u32 {
+        self.x_pos * self.y_pos
+    }
 }
 
-fn execute_command<T: Driver>(command: &String, position: &mut T) {
+impl Submarine for PositionAim {
+    fn change_position(&mut self, direction: &str, strength: u32) {
+        match direction {
+            "forward" => {
+                self.x_pos += strength;
+                self.y_pos += self.aim * strength;
+            },
+            "down" => self.aim += strength,
+            "up" => self.aim -= strength,
+            _ => println!("Unknown command, skipping!")
+        }
+    }
+
+    fn calculate_position(&self) -> u32 {
+        self.x_pos *self.y_pos
+    }
+}
+
+fn execute_command<S: Submarine>(command: &String, submarine: &mut S) {
     let command: Vec<&str> = command.split(' ').collect();
     if command.len() == 2 {
         let direction = command[0];
         let strength = command[1].parse::<u32>().expect("Cannot parse value!");
-        position.move_submarine(direction, strength);
+        submarine.change_position(direction, strength);
     } else {
         println!("Incorrect command format!");
     }
 }
 
-fn drive<R: BufRead>(commands: &mut R) -> Position {
-    let mut position: Position = Position { x_pos: 0, y_pos: 0};
-
+fn drive<R: BufRead, S: Submarine>(commands: &mut R, submarine: &mut S) {
     for command in commands.lines() {
         let command = command.expect("Unable to read line!");
-        execute_command(&command, &mut position);
+        execute_command(&command, submarine);
     }
-
-    position
 }
 
 fn task_one() {
     let file = File::open("src/input.txt").expect("File cannot be opened!");
     let mut commands = BufReader::new(file);
-    let position: Position = drive(&mut commands);
-    let result = position.x_pos * position.y_pos;
+    let mut submarine: Position = Position{ x_pos: 0, y_pos: 0 };
+    drive(&mut commands, &mut submarine);
+    let result = submarine.calculate_position();
+
+    println!("Total: {}", result);
+}
+
+fn task_two() {
+    let file = File::open("src/input.txt").expect("File cannot be opened!");
+    let mut commands = BufReader::new(file);
+    let mut submarine: PositionAim = PositionAim{ x_pos: 0, y_pos: 0, aim: 0 };
+    drive(&mut commands, &mut submarine);
+    let result = submarine.calculate_position();
 
     println!("Total: {}", result);
 }
 
 fn main() {
     task_one();
+    task_two();
 }
 
 #[cfg(test)]
@@ -61,36 +98,72 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_execute_forward_command() {
+    fn test_execute_forward_command_for_position() {
         let command = "forward 5".to_string();
-        let mut position: Position = Position{ x_pos: 0, y_pos: 0};
+        let mut actual: Position = Position{ x_pos: 0, y_pos: 0};
         let expected: Position = Position{ x_pos: 5, y_pos: 0};
 
-        execute_command(&command, &mut position);
-        assert_eq!(position.x_pos, expected.x_pos, "x_pos are not equal");
-        assert_eq!(position.y_pos, expected.y_pos, "y_pos are not equal");
+        execute_command(&command, &mut actual);
+        assert_eq!(actual.x_pos, expected.x_pos, "x_pos are not equal");
+        assert_eq!(actual.y_pos, expected.y_pos, "y_pos are not equal");
     }
 
     #[test]
-    fn test_execute_up_command() {
+    fn test_execute_up_command_for_position() {
         let command = "up 2".to_string();
-        let mut position: Position = Position{ x_pos: 2, y_pos: 12 };
+        let mut actual: Position = Position{ x_pos: 2, y_pos: 12 };
         let expected: Position = Position{ x_pos: 2, y_pos: 10 };
 
-        execute_command(&command, &mut position);
-        assert_eq!(position.x_pos, expected.x_pos, "x_pos are not equal");
-        assert_eq!(position.y_pos, expected.y_pos, "y_pos are not equal");
+        execute_command(&command, &mut actual);
+        assert_eq!(actual.x_pos, expected.x_pos, "x_pos are not equal");
+        assert_eq!(actual.y_pos, expected.y_pos, "y_pos are not equal");
     }
 
     #[test]
-    fn test_execute_down_command() {
+    fn test_execute_down_command_for_position() {
         let command = "down 3".to_string();
-        let mut position: Position = Position{ x_pos: 2, y_pos: 12 };
+        let mut actual: Position = Position{ x_pos: 2, y_pos: 12 };
         let expected: Position = Position{ x_pos: 2, y_pos: 15};
 
-        execute_command(&command, &mut position);
-        assert_eq!(position.x_pos, expected.x_pos, "x_pos are not equal");
-        assert_eq!(position.y_pos, expected.y_pos, "y_pos are not equal");
+        execute_command(&command, &mut actual);
+        assert_eq!(actual.x_pos, expected.x_pos, "x_pos are not equal");
+        assert_eq!(actual.y_pos, expected.y_pos, "y_pos are not equal");
+    }
+
+    #[test]
+    fn test_execute_forward_command_for_positionaim() {
+        let command = "forward 5".to_string();
+        let mut actual: PositionAim = PositionAim{ x_pos: 0, y_pos: 10, aim: 2 };
+        let expected: PositionAim = PositionAim{ x_pos: 5, y_pos: 20, aim: 2 };
+
+        execute_command(&command, &mut actual);
+        assert_eq!(actual.x_pos, expected.x_pos, "x_pos are not equal");
+        assert_eq!(actual.y_pos, expected.y_pos, "y_pos are not equal");
+        assert_eq!(actual.aim, expected.aim, "aim are not equal");
+    }
+
+    #[test]
+    fn test_execute_up_command_for_positionaim() {
+        let command = "up 2".to_string();
+        let mut actual: PositionAim = PositionAim{ x_pos: 2, y_pos: 12, aim: 3 };
+        let expected: PositionAim = PositionAim{ x_pos: 2, y_pos: 12, aim: 1 };
+
+        execute_command(&command, &mut actual);
+        assert_eq!(actual.x_pos, expected.x_pos, "x_pos are not equal");
+        assert_eq!(actual.y_pos, expected.y_pos, "y_pos are not equal");
+        assert_eq!(actual.aim, expected.aim, "aim are not equal");
+    }
+
+    #[test]
+    fn test_execute_down_command_for_positionaim() {
+        let command = "down 3".to_string();
+        let mut actual: PositionAim = PositionAim{ x_pos: 2, y_pos: 12, aim: 8 };
+        let expected: PositionAim = PositionAim{ x_pos: 2, y_pos: 12, aim: 11 };
+
+        execute_command(&command, &mut actual);
+        assert_eq!(actual.x_pos, expected.x_pos, "x_pos are not equal");
+        assert_eq!(actual.y_pos, expected.y_pos, "y_pos are not equal");
+        assert_eq!(actual.aim, expected.aim, "aim are not equal");
     }
 
     #[test]
@@ -98,7 +171,8 @@ mod tests {
         let commands = "forward 5\ndown 5\nforward 8\nup 3\ndown 8\nforward 2\n";
         let expected: Position = Position{ x_pos: 15, y_pos: 10 };
 
-        let position: Position = drive(&mut commands.as_bytes());
+        let mut position: Position = Position{ x_pos: 0, y_pos: 0 };
+        drive(&mut commands.as_bytes(), &mut position);
         assert_eq!(position.x_pos, expected.x_pos, "x_pos are not equal");
         assert_eq!(position.y_pos, expected.y_pos, "y_pos are not equal");
     }
