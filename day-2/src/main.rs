@@ -50,14 +50,23 @@ impl Submarine for PositionAim {
     }
 }
 
+fn parse_command(command: &String) -> (&str, &str) {
+    for (i, &word) in command.as_bytes().iter().enumerate() {
+        if word == b' ' {
+            return (&command[..i], &command[i+1..])
+        }
+    }
+
+    (&"", &"")
+}
+
 fn execute_command<S: Submarine>(command: &String, submarine: &mut S) {
-    let command: Vec<&str> = command.split(' ').collect();
-    if command.len() == 2 {
-        let direction = command[0];
-        let strength = command[1].parse::<u32>().expect("Cannot parse value!");
+    let (direction, strength) = parse_command(command);
+    if direction != "" && strength != "" {
+        let strength = strength.parse::<u32>().expect("Cannot parse value!");
         submarine.change_position(direction, strength);
     } else {
-        println!("Incorrect command format!");
+        println!("Invalid command format {}, skipping!", command);
     }
 }
 
@@ -96,6 +105,24 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_command_return_correct_tuple() {
+        let command = "up 10".to_string();
+        let (direction, strength) = parse_command(&command);
+
+        assert_eq!(direction, "up", "direction is not equal up");
+        assert_eq!(strength, "10", "strength is not equal 10");
+    }
+
+    #[test]
+    fn test_parse_command_return_empty_tuple() {
+        let command = "down10".to_string();
+        let (direction, strength) = parse_command(&command);
+
+        assert_eq!(direction, "", "direction is not empty");
+        assert_eq!(strength, "", "strength is not empty");
+    }
 
     #[test]
     fn test_execute_forward_command_for_position() {
