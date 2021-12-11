@@ -50,7 +50,7 @@ impl Submarine for PositionAim {
     }
 }
 
-fn parse_command(command: &String) -> (&str, &str) {
+fn parse_command(command: &str) -> (&str, &str) {
     for (i, &word) in command.as_bytes().iter().enumerate() {
         if word == b' ' {
             return (&command[..i], &command[i+1..])
@@ -60,7 +60,7 @@ fn parse_command(command: &String) -> (&str, &str) {
     (&"", &"")
 }
 
-fn execute_command<S: Submarine>(command: &String, submarine: &mut S) {
+fn execute_command<S: Submarine>(command: &str, submarine: &mut S) {
     let (direction, strength) = parse_command(command);
     if direction != "" && strength != "" {
         let strength = strength.parse::<u32>().expect("Cannot parse value!");
