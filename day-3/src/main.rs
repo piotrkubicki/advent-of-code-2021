@@ -7,13 +7,10 @@ struct Report {
 }
 
 trait ReportParser {
-    fn get_gamma_rate(&self) -> String;
-    fn get_epsilon_rate(&self) -> String;
-    fn get_power_consumption(&self) -> u32;
     fn update_report(&mut self, reading: &str);
 }
 
-impl ReportParser for Report {
+impl Report {
     fn get_gamma_rate(&self) -> String {
         let mut gamma_rate = String::new();
 
@@ -46,7 +43,9 @@ impl ReportParser for Report {
 
         gamma_rate * epsilon_rate
     }
+}
 
+impl ReportParser for Report {
     fn update_report(&mut self, reading: &str) {
         self.total += 1;
         if self.column_sums.len() == 0 {
