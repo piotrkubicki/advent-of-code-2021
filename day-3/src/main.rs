@@ -67,16 +67,36 @@ struct LifeSupportReport {
 
 impl LifeSupportReport {
     fn get_oxygen_gen_rate(&mut self) -> String {
-        for i in 0..4 {
-            println!("{:?}", self.readings);
-            let filter: char = self.readings[0].chars().nth(i).unwrap();
-            self.readings = self
-                .readings
-                .iter()
-                .cloned()
-                .filter(|reading| reading.chars().nth(i).unwrap() != filter)
-                .collect();
+        for i in 0..self.readings[0].len() {
+            let mut bag_of_zeros: Vec<String> = vec![];
+            let mut bag_of_ones: Vec<String> = vec![];
+
+            for reading in &self.readings {
+                match reading.chars().nth(i).unwrap() {
+                    '1' => bag_of_ones.push(reading.clone()),
+                    '0' => bag_of_zeros.push(reading.clone()),
+                    _ => panic!("Value greater than 1 is not allowed!"),
+                }
+            }
+            if bag_of_zeros.len() > bag_of_ones.len() {
+                self.readings = self
+                    .readings
+                    .iter()
+                    .cloned()
+                    .filter(|x| x.chars().nth(i).unwrap() == '0')
+                    .collect();
+            } else {
+                self.readings = self
+                    .readings
+                    .iter()
+                    .cloned()
+                    .filter(|x| x.chars().nth(i).unwrap() == '1')
+                    .collect();
+            }
+
+            println! {"{:?}", self.readings};
         }
+
         self.readings[0].clone()
     }
 }
