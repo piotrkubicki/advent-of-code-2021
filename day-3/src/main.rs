@@ -74,16 +74,51 @@ impl LifeSupportReport {
                 match reading.chars().nth(i).unwrap() {
                     '1' => bags[1].push(reading.clone()),
                     '0' => bags[0].push(reading.clone()),
-                    _ => panic!("Value greater than 1 is not allowed!"),
+                    _ => continue,
                 }
             }
             readings = bags[(bags[0].len() <= bags[1].len()) as usize]
                 .iter()
                 .cloned()
                 .collect();
+            if readings.len() == 1 {
+                break;
+            }
         }
 
         isize::from_str_radix(&readings[0], 2).unwrap() as u32
+    }
+
+    fn get_co2_scrubber_rate(&mut self) -> u32 {
+        let mut readings: Vec<String> = self.readings.iter().cloned().collect();
+        for i in 0..readings[0].len() {
+            let mut bags = [vec![], vec![]];
+            for reading in &readings {
+                match reading.chars().nth(i).unwrap() {
+                    '1' => bags[1].push(reading.clone()),
+                    '0' => bags[0].push(reading.clone()),
+                    _ => continue,
+                }
+            }
+            readings = bags[!(bags[0].len() <= bags[1].len()) as usize]
+                .iter()
+                .cloned()
+                .collect();
+            if readings.len() == 1 {
+                break;
+            };
+        }
+        isize::from_str_radix(&readings[0], 2).unwrap() as u32
+    }
+
+    fn calculate_life_support_rate(&mut self) -> u32 {
+        self.get_oxygen_gen_rate() * self.get_co2_scrubber_rate()
+    }
+}
+
+impl ReportParser for LifeSupportReport {
+    fn update_report(&mut self, reading: &str) {
+        self.readings.push(reading.trim().to_string());
     }
 }
 
@@ -113,8 +148,19 @@ fn task_one() {
     println!("The power consumption is: {}", power_consumption);
 }
 
+fn task_two() {
+    let file = File::open("src/input.txt").expect("Cannot open file!");
+    let mut readings = BufReader::new(file);
+    let mut report = LifeSupportReport { readings: vec![] };
+
+    run(&mut readings, &mut report);
+    let life_support_rate = report.calculate_life_support_rate();
+    println!("The Life Support is: {}", life_support_rate);
+}
+
 fn main() {
     task_one();
+    task_two();
 }
 
 #[cfg(test)]
@@ -211,6 +257,53 @@ mod tests {
         let expected = 23;
         let actual = report.get_oxygen_gen_rate();
 
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_get_co2_scrubber_rate() {
+        let mut report = LifeSupportReport {
+            readings: vec![
+                "00100".to_string(),
+                "11110".to_string(),
+                "10110".to_string(),
+                "10111".to_string(),
+                "10101".to_string(),
+                "01111".to_string(),
+                "00111".to_string(),
+                "11100".to_string(),
+                "10000".to_string(),
+                "11001".to_string(),
+                "00010".to_string(),
+                "01010".to_string(),
+            ],
+        };
+        let expected = 10;
+        let actual = report.get_co2_scrubber_rate();
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_calculate_life_support_rate() {
+        let mut report = LifeSupportReport {
+            readings: vec![
+                "00100".to_string(),
+                "11110".to_string(),
+                "10110".to_string(),
+                "10111".to_string(),
+                "10101".to_string(),
+                "01111".to_string(),
+                "00111".to_string(),
+                "11100".to_string(),
+                "10000".to_string(),
+                "11001".to_string(),
+                "00010".to_string(),
+                "01010".to_string(),
+            ],
+        };
+        let expected = 230;
+        let actual = report.calculate_life_support_rate();
         assert_eq!(actual, expected);
     }
 }
