@@ -66,38 +66,24 @@ struct LifeSupportReport {
 }
 
 impl LifeSupportReport {
-    fn get_oxygen_gen_rate(&mut self) -> String {
-        for i in 0..self.readings[0].len() {
-            let mut bag_of_zeros: Vec<String> = vec![];
-            let mut bag_of_ones: Vec<String> = vec![];
-
-            for reading in &self.readings {
+    fn get_oxygen_gen_rate(&mut self) -> u32 {
+        let mut readings: Vec<String> = self.readings.iter().cloned().collect();
+        for i in 0..readings[0].len() {
+            let mut bags = [vec![], vec![]];
+            for reading in &readings {
                 match reading.chars().nth(i).unwrap() {
-                    '1' => bag_of_ones.push(reading.clone()),
-                    '0' => bag_of_zeros.push(reading.clone()),
+                    '1' => bags[1].push(reading.clone()),
+                    '0' => bags[0].push(reading.clone()),
                     _ => panic!("Value greater than 1 is not allowed!"),
                 }
             }
-            if bag_of_zeros.len() > bag_of_ones.len() {
-                self.readings = self
-                    .readings
-                    .iter()
-                    .cloned()
-                    .filter(|x| x.chars().nth(i).unwrap() == '0')
-                    .collect();
-            } else {
-                self.readings = self
-                    .readings
-                    .iter()
-                    .cloned()
-                    .filter(|x| x.chars().nth(i).unwrap() == '1')
-                    .collect();
-            }
-
-            println! {"{:?}", self.readings};
+            readings = bags[(bags[0].len() <= bags[1].len()) as usize]
+                .iter()
+                .cloned()
+                .collect();
         }
 
-        self.readings[0].clone()
+        isize::from_str_radix(&readings[0], 2).unwrap() as u32
     }
 }
 
@@ -222,7 +208,7 @@ mod tests {
                 "01010".to_string(),
             ],
         };
-        let expected = "10111".to_string();
+        let expected = 23;
         let actual = report.get_oxygen_gen_rate();
 
         assert_eq!(actual, expected);
