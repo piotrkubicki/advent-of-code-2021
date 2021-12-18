@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
+#[derive(Eq, PartialEq, Debug)]
 struct Gameboard {
     x: u32,
     y: u32,
@@ -31,7 +32,7 @@ impl Gameboard {
         Gameboard {
             x: x,
             y: y,
-            values: vec![],
+            values: values,
         }
     }
 }
@@ -75,16 +76,15 @@ mod tests {
     fn build_gameboard() {
         let test_input = "10 11  9 19  4\n 9 11 4  5 23\n21 11 32 18 12\n22 19 11 12  4\n23 32 12 11  5\n\n10 11  9 19  4\n 8 11 4  5 23\n21 11 32 18 12\n22 19 11 12  4\n23 32 12 11  5";
         let actual = Gameboard::build(&mut test_input.as_bytes(), 5, 5);
-        let expected = vec![
-            10, 11, 9, 19, 4, 9, 11, 4, 5, 23, 21, 11, 32, 18, 12, 22, 19, 11, 12, 4, 23, 32, 12,
-            11, 5,
-        ];
+        let expected = Gameboard {
+            x: 5,
+            y: 5,
+            values: vec![
+                10, 11, 9, 19, 4, 9, 11, 4, 5, 23, 21, 11, 32, 18, 12, 22, 19, 11, 12, 4, 23, 32,
+                12, 11, 5,
+            ],
+        };
 
-        assert_eq!(actual.y, 5);
-        assert_eq!(actual.x, 5);
-
-        for (actual, expected) in actual.values.iter().zip(expected.iter()) {
-            assert_eq!(actual, expected);
-        }
+        assert_eq!(actual, expected);
     }
 }
