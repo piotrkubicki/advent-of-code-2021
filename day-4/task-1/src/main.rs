@@ -9,6 +9,12 @@ enum Field {
 }
 
 #[derive(PartialEq, Debug)]
+struct Position {
+    x: usize,
+    y: usize,
+}
+
+#[derive(PartialEq, Debug)]
 struct Gameboard {
     id: u32,
     rows: u32,
@@ -31,15 +37,44 @@ impl Gameboard {
         }
     }
 
-    fn is_row_all_marked(row: Vec<Field>) -> bool {
-        if row.iter().all(|x| match x {
-            Field::Marked(_) => true,
+    fn is_row_all_marked(&self, row_index: usize) -> bool {
+        match self.data.get(row_index) {
+            Some(row) => {
+                !row.iter().any(|x| match x {
+                    Field::Unmarked(_) => true,
+                    _ => false,
+                })
+            },
             _ => false,
-        }) {
-            return true;
-        } else {
-            false
         }
+    }
+
+    fn is_column_all_marked(&self, column_index: usize) -> bool {
+        !self.data.iter().any(|row| match row.get(column_index) {
+            Some(field) => match field {
+                Field::Unmarked(_) => true,
+                _ => false,
+            },
+            _ => false,
+        })
+    }
+
+    fn check_number(&mut self, number: u32) -> Option<Position> {
+        for (i, row) in self.data.iter_mut().enumerate() {
+            for (j, field) in row.iter_mut().enumerate() {
+                match field {
+                    Field::Unmarked(value) => {
+                        if *value == number {
+                            *field = Field::Marked(*value);
+                            return Option::Some(Position{x: i, y: j});
+                        }
+                    },
+                    _ => continue,
+                }
+            }
+        }
+
+        Option::None
     }
 }
 
@@ -78,7 +113,21 @@ fn main() {
     let mut reader = BufReader::new(file);
     let mut lucky_numbers = String::new();
     reader.read_line(&mut lucky_numbers).expect("Cannot read lucky_numbers, file may be corrupted!");
+    let lucky_numbers = lucky_numbers
+        .split(",")
+        .map(|x| x.trim().parse::<u32>().unwrap());
     let mut gameboards = build_gameboards(&mut reader, rows, columns);
+
+    for lucky_number in lucky_numbers {
+        for gameboard in gameboards.iter_mut() {
+            match gameboard.check_number(lucky_number) {
+                Some(position) => {
+                    break;
+                },
+                _ => continue,
+            };
+        }
+    }
 }
 
 #[cfg(test)]
@@ -123,11 +172,42 @@ mod tests {
         assert_eq!(actual.len(), 2);
     }
 
-    #[test_case([Field::Marked(10), Field::Marked(1), Field::Marked(2)].to_vec() => true)]
-    #[test_case([Field::Marked(10), Field::Unmarked(1), Field::Marked(2)].to_vec() => false)]
-    #[test_case([Field::Unmarked(1), Field::Unmarked(11), Field::Unmarked(2)].to_vec() => false)]
-    fn is_row_all_marked_returns_expected(input: Vec<Field>) -> bool {
-        Gameboard::is_row_all_marked(input)
+    #[test_case(Gameboard{ id: 1, rows: 1, columns: 1, data: vec![vec![Field::Marked(10), Field::Marked(1), Field::Marked(2)]] } => true)]
+    #[test_case(Gameboard{ id: 1, rows: 1, columns: 1, data: vec![vec![Field::Marked(10), Field::Unmarked(1), Field::Marked(2)]] } => false)]
+    #[test_case(Gameboard{ id: 1, rows: 1, columns: 1, data: vec![vec![Field::Unmarked(1), Field::Unmarked(11), Field::Unmarked(2)]] } => false)]
+    fn is_row_all_marked_returns_expected(gameboard: Gameboard) -> bool {
+        gameboard.is_row_all_marked(0)
     }
 
+    #[test_case(Gameboard{ id: 1, rows: 1, columns: 1, data: vec![vec![Field::Marked(10), Field::Marked(1)], vec![Field::Marked(12), Field::Unmarked(8)]] }, 1 => false)]
+    #[test_case(Gameboard{ id: 1, rows: 1, columns: 1, data: vec![vec![Field::Marked(10), Field::Marked(1)], vec![Field::Marked(12), Field::Unmarked(8)]] }, 0 => true)]
+    fn is_column_all_marked_returns_expected(gameboard: Gameboard, column_index: usize) -> bool {
+        gameboard.is_column_all_marked(column_index)
+    }
+
+    #[test]
+    fn check_number_returns_expected() {
+        let mut gameboard = Gameboard {
+            id: 0,
+            rows: 2,
+            columns: 2,
+            data: vec![
+                vec![Field::Unmarked(2), Field::Unmarked(1)],
+                vec![Field::Unmarked(10), Field::Marked(4)],
+            ],
+        };
+
+        assert_eq!(gameboard.check_number(1), Some(Position{x: 0, y: 1}));
+        let actual = match gameboard.data.get(0) {
+            Some(field) => match field.get(1) {
+                Some(field) => field,
+                _ => &Field::None,
+            },
+            _ => &Field::None,
+        };
+        assert_eq!(actual, &Field::Marked(1));
+        assert_eq!(gameboard.check_number(2), Some(Position{x: 0, y: 0}));
+        assert_eq!(gameboard.check_number(10), Some(Position{x: 1, y: 0}));
+        assert_eq!(gameboard.check_number(4), None);
+    }
 }
