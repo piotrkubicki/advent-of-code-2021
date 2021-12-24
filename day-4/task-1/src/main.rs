@@ -76,6 +76,16 @@ impl Gameboard {
 
         Option::None
     }
+
+    fn sum_unmarked(&self) -> u32 {
+        self.data.iter()
+            .flatten()
+            .map(|field| match field {
+                Field::Unmarked(value) => value,
+                _ => &0,
+            })
+            .sum()
+    }
 }
 
 fn build_gameboards<T: BufRead>(reader: &mut T, rows: u32, columns: u32) -> Vec<Gameboard> {
@@ -85,7 +95,7 @@ fn build_gameboards<T: BufRead>(reader: &mut T, rows: u32, columns: u32) -> Vec<
 
     for line in reader.lines() {
         let line = line.expect("Cannot read gameboard data, file may be corrupted!");
-        if !line.eq("\n") && numbers.len() > 0 {
+        if line.eq("") && numbers.len() > 0 {
             gameboards.push(Gameboard::build(counter, rows, columns, &mut numbers));
             counter += 1;
             numbers = Vec::new();
@@ -118,11 +128,27 @@ fn main() {
         .map(|x| x.trim().parse::<u32>().unwrap());
     let mut gameboards = build_gameboards(&mut reader, rows, columns);
 
-    for lucky_number in lucky_numbers {
+    'main: for lucky_number in lucky_numbers {
         for gameboard in gameboards.iter_mut() {
             match gameboard.check_number(lucky_number) {
                 Some(position) => {
-                    break;
+                    if gameboard.is_row_all_marked(position.x) {
+                        for row in gameboard.data.iter() {
+                            println!("{:?}", row);
+                        }
+                        let res = gameboard.sum_unmarked() * lucky_number;
+                        println!("The final result is {}", res);
+                        break 'main;
+                    }
+                    if gameboard.is_column_all_marked(position.y) {
+                        for row in gameboard.data.iter() {
+                            println!("{:?}", row);
+                        }
+                        let res = gameboard.sum_unmarked() * lucky_number;
+                        println!("The final result is {}", res);
+                        break 'main;
+                    }
+
                 },
                 _ => continue,
             };
@@ -165,11 +191,31 @@ mod tests {
 
     #[test]
     fn build_gameboards_returns_vector_of_gameboards() {
-        let mut input = "10  1 12 17\n 9  7 16 19\n\n12 16 15 14\n11 13  8 15\n\n".as_bytes();
+        let mut input = "10  1\n12 17\n\n 9  7\n16 19\n\n".as_bytes();
         let actual = build_gameboards(&mut input, 2, 2);
-        println!("{:?}", actual);
+        let expected = vec![
+            Gameboard{
+                id: 0,
+                rows: 2,
+                columns: 2,
+                data: vec![
+                    vec![Field::Unmarked(10), Field::Unmarked(1)],
+                    vec![Field::Unmarked(12), Field::Unmarked(17)],
+                ],
+            },
+            Gameboard{
+                id: 1,
+                rows: 2,
+                columns: 2,
+                data: vec![
+                    vec![Field::Unmarked(9), Field::Unmarked(7)],
+                    vec![Field::Unmarked(16), Field::Unmarked(19)],
+                ],
+            },
+        ];
 
         assert_eq!(actual.len(), 2);
+        assert_eq!(actual, expected);
     }
 
     #[test_case(Gameboard{ id: 1, rows: 1, columns: 1, data: vec![vec![Field::Marked(10), Field::Marked(1), Field::Marked(2)]] } => true)]
@@ -209,5 +255,23 @@ mod tests {
         assert_eq!(gameboard.check_number(2), Some(Position{x: 0, y: 0}));
         assert_eq!(gameboard.check_number(10), Some(Position{x: 1, y: 0}));
         assert_eq!(gameboard.check_number(4), None);
+    }
+
+    #[test]
+    fn sum_unmarked_return_expected() {
+        let gameboard = Gameboard{
+            id: 0,
+            rows: 3,
+            columns: 3,
+            data: vec![
+                vec![Field::Unmarked(1), Field::Unmarked(2), Field::Marked(3)],
+                vec![Field::Marked(4), Field::Marked(5), Field::Marked(6)],
+                vec![Field::Marked(7), Field::Unmarked(8), Field::Unmarked(9)],
+            ],
+        };
+        let expected = 20;
+        let actual = gameboard.sum_unmarked();
+
+        assert_eq!(actual, expected);
     }
 }
