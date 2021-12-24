@@ -34,14 +34,13 @@ impl Gameboard {
     }
 
     fn is_row_all_marked(&self, row_index: usize) -> bool {
-        match self.data.get(row_index) {
-            Some(row) => {
-                !row.iter().any(|x| match x {
-                    Field::Unmarked(_) => true,
-                    _ => false,
-                })
-            },
-            _ => false,
+        if let Some(row) = self.data.get(row_index) {
+            !row.iter().any(|x| match x {
+                Field::Unmarked(_) => true,
+                _ => false,
+            })
+        } else {
+            return false;
         }
     }
 
@@ -58,14 +57,11 @@ impl Gameboard {
     fn check_number(&mut self, number: u32) -> Option<Position> {
         for (i, row) in self.data.iter_mut().enumerate() {
             for (j, field) in row.iter_mut().enumerate() {
-                match field {
-                    Field::Unmarked(value) => {
-                        if *value == number {
-                            *field = Field::Marked(*value);
-                            return Option::Some(Position{x: i, y: j});
-                        }
-                    },
-                    _ => continue,
+                if let Field::Unmarked(value) =  field {
+                    if *value == number {
+                        *field = Field::Marked(*value);
+                        return Option::Some(Position{x: i, y: j});
+                    }
                 }
             }
         }
@@ -112,13 +108,10 @@ fn parse_gameboard_data(data: &str) -> Vec<u32> {
 
 fn check_number(lucky_number: u32, gameboards: &mut Vec<Gameboard>) -> Option<&Gameboard> {
     for gameboard in gameboards {
-        match gameboard.check_number(lucky_number) {
-            Some(position) => {
-                if gameboard.is_row_all_marked(position.x) || gameboard.is_column_all_marked(position.y) {
-                    return Some(gameboard);
-                }
-            },
-            _ => continue,
+        if let Some(position) = gameboard.check_number(lucky_number) {
+            if gameboard.is_row_all_marked(position.x) || gameboard.is_column_all_marked(position.y) {
+                return Some(gameboard);
+            }
         };
     }
     None
@@ -126,10 +119,9 @@ fn check_number(lucky_number: u32, gameboards: &mut Vec<Gameboard>) -> Option<&G
 
 fn find_winning_board(lucky_numbers: Vec<u32>, mut gameboards: Vec<Gameboard>) -> Option<(u32, Gameboard)> {
     for lucky_number in lucky_numbers {
-        match check_number(lucky_number, &mut gameboards) {
-            Some(gameboard) => return Some((lucky_number, (*gameboard).clone())),
-            _ => continue,
-        };
+        if let Some(gameboard) = check_number(lucky_number, &mut gameboards) {
+            return Some((lucky_number, (*gameboard).clone()));
+        }
     }
     None
 }
@@ -145,10 +137,9 @@ fn main() {
         .collect();
     let gameboards = build_gameboards(&mut reader);
     let winning_board = find_winning_board(lucky_numbers, gameboards);
-    let result = match winning_board {
-        Some((lucky_number, gameboard)) => gameboard.sum_unmarked() * lucky_number,
-        _ => 0,
-    };
+    let result = if let Some((lucky_number, gameboard)) = winning_board {
+        gameboard.sum_unmarked() * lucky_number
+    } else { 0 };
     println!("The final result is {}", result);
 }
 
